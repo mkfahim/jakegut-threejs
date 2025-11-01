@@ -24,23 +24,18 @@ jobs:
           root_file: main.tex
           latexmk_use_xelatex: true
 
-      # Safe timestamp (Windows compatible)
-      - name: Set timestamp
-        run: |
-          SAFE_DATE=$(date +'%Y-%m-%d-%H-%M-%S')
-          echo "SAFE_DATE=$SAFE_DATE" >> $GITHUB_ENV
-
-      # Copy compiled PDF to artifacts folder
+      # Copy compiled PDF to artifacts folder (safe, no warnings)
       - name: Copy PDF to artifacts
         run: |
           mkdir -p artifacts
-          cp main.pdf artifacts/resume-${{ env.SAFE_DATE }}.pdf
+          SAFE_DATE=$(date +'%Y-%m-%d-%H-%M-%S')
+          cp main.pdf artifacts/resume-$SAFE_DATE.pdf
 
       # Commit and push updated PDFs
       - name: Push updated PDF
         run: |
           git config --local user.name "GitHub Actions"
           git config --local user.email "actions@github.com"
-          git add .
+          git add artifacts/
           git commit -m "[CD] Update resume.pdf" || echo "No changes to commit"
           git push
