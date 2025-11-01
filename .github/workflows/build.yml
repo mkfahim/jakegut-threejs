@@ -3,46 +3,44 @@ name: Build LaTeX Resume
 on:
   push:
     paths:
-     - ".github/workflows/build.yml"
-     - "**.tex"
-     - "**.cls"
+      - "**.tex"
+      - "**.cls"
+      - ".github/workflows/build.yml"
 
 jobs:
   build_latex:
     runs-on: ubuntu-latest
     steps:
-      - name: Set Up Git Repository
-        uses: actions/checkout@v1
+      # Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
-          fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
-      - name: Compile LaTeX document
+          fetch-depth: 0
+
+      # Compile LaTeX
+      - name: Compile LaTeX
         uses: xu-cheng/latex-action@v2
         with:
           root_file: main.tex
-          # pre_compile: "tlmgr update --self && tlmgr update --all"
-          post_compile: "latexmk -c"
           latexmk_use_xelatex: true
-          working_directory: "resume/"
-      - name: Get current date
-        id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H:%M:%S')"
-      - name: Copy PDF to artifacts and public and Cleanup
-        run: |
-          cp resume/main.pdf resume/artifacts/resume-${{ steps.date.outputs.date }}.pdf
-          cp resume/main.pdf public/resume.pdf
 
-          rm resume/main.pdf
-          rm resume/main.xdv
-      - name: Push changes to GitHub
+      # Safe timestamp (Windows compatible)
+      - name: Set timestamp
         run: |
-          git config --local user.name "Jake Gutierrez"
-          git config --local user.email "jakegut0108@gmail.com"
+          SAFE_DATE=$(date +'%Y-%m-%d-%H-%M-%S')
+          echo "SAFE_DATE=$SAFE_DATE" >> $GITHUB_ENV
 
+      # Copy compiled PDF to artifacts folder
+      - name: Copy PDF to artifacts
+        run: |
+          mkdir -p artifacts
+          cp main.pdf artifacts/resume-${{ env.SAFE_DATE }}.pdf
+
+      # Commit and push updated PDFs
+      - name: Push updated PDF
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
           git add .
-          git commit -m "[CD] Update resume.pdf"
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          git commit -m "[CD] Update resume.pdf" || echo "No changes to commit"
+          git push
